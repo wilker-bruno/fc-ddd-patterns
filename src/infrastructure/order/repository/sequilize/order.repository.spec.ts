@@ -2,6 +2,7 @@ import { Sequelize } from "sequelize-typescript";
 import Order from "../../../../domain/checkout/entity/order";
 import OrderItem from "../../../../domain/checkout/entity/order_item";
 import Customer from "../../../../domain/customer/entity/customer";
+import CustomerFactory from "../../../../domain/customer/factory/customer.factory";
 import Address from "../../../../domain/customer/value-object/address";
 import Product from "../../../../domain/product/entity/product";
 import CustomerModel from "../../../customer/repository/sequelize/customer.model";
@@ -37,13 +38,12 @@ describe("Order repository test", () => {
   });
 
   it("should create a new order", async () => {
-    const customerRepository = new CustomerRepository();
-    const customer = new Customer("123", "Customer 1");
-    const address = new Address("Street 1", 1, "Zipcode 1", "City 1");
-    customer.changeAddress(address);
-    await customerRepository.create(customer);
-
     const productRepository = new ProductRepository();
+    const customerRepository = new CustomerRepository();
+    
+    const customer = CustomerFactory.createWithAddress("Customer 1", new Address("Street 1", 1, "Zipcode 1", "City 1"));
+    await customerRepository.create(customer);
+    
     const product = new Product("123", "Product 1", 10);
     await productRepository.create(product);
 
@@ -55,7 +55,7 @@ describe("Order repository test", () => {
       2
     );
 
-    const order = new Order("123", "123", [ordemItem]);
+    const order = new Order("123", customer.id, [ordemItem]);
 
     const orderRepository = new OrderRepository();
     await orderRepository.create(order);
@@ -66,8 +66,8 @@ describe("Order repository test", () => {
     });
 
     expect(orderModel.toJSON()).toStrictEqual({
-      id: "123",
-      customer_id: "123",
+      id: order.id,
+      customer_id: customer.id,
       total: order.total(),
       items: [
         {
@@ -75,10 +75,37 @@ describe("Order repository test", () => {
           name: ordemItem.name,
           price: ordemItem.price,
           quantity: ordemItem.quantity,
-          order_id: "123",
-          product_id: "123",
+          order_id: order.id,
+          product_id: product.id,
         },
       ],
     });
+  });
+
+  it("should find an order by id", async () => {
+    const productRepository = new ProductRepository();
+    const customerRepository = new CustomerRepository();
+    
+    const customer = CustomerFactory.createWithAddress("Customer 1", new Address("Street 1", 1, "Zipcode 1", "City 1"));
+    await customerRepository.create(customer);
+
+    const product = new Product("123", "Product 1", 10);
+    await productRepository.create(product);
+
+    const orderItem = new OrderItem(
+      "1",
+      product.name,
+      product.price,
+      product.id,
+      2
+    );
+
+    const order = new Order("123", customer.id, [orderItem]);
+
+    const orderRepository = new OrderRepository();
+    await orderRepository.create(order);
+
+    const orderFound = await orderRepository.find(order.id);
+    expect(orderFound).toStrictEqual(order);
   });
 });
