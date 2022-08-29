@@ -40,10 +40,10 @@ describe("Order repository test", () => {
   it("should create a new order", async () => {
     const productRepository = new ProductRepository();
     const customerRepository = new CustomerRepository();
-    
+
     const customer = CustomerFactory.createWithAddress("Customer 1", new Address("Street 1", 1, "Zipcode 1", "City 1"));
     await customerRepository.create(customer);
-    
+
     const product = new Product("123", "Product 1", 10);
     await productRepository.create(product);
 
@@ -85,7 +85,7 @@ describe("Order repository test", () => {
   it("should find an order by id", async () => {
     const productRepository = new ProductRepository();
     const customerRepository = new CustomerRepository();
-    
+
     const customer = CustomerFactory.createWithAddress("Customer 1", new Address("Street 1", 1, "Zipcode 1", "City 1"));
     await customerRepository.create(customer);
 
@@ -107,5 +107,34 @@ describe("Order repository test", () => {
 
     const orderFound = await orderRepository.find(order.id);
     expect(orderFound).toStrictEqual(order);
+  });
+
+  it("should find all orders", async () => {
+    const productRepository = new ProductRepository();
+    const customerRepository = new CustomerRepository();
+
+    const customer = CustomerFactory.createWithAddress("Customer 1", new Address("Street 1", 1, "Zipcode 1", "City 1"));
+    await customerRepository.create(customer);
+
+    const product = new Product("123", "Product 1", 10);
+    await productRepository.create(product);
+
+    const order1 = new Order("123", customer.id, [
+      new OrderItem("1", product.name, product.price, product.id, 1)
+    ]);
+
+    const orderRepository = new OrderRepository();
+    await orderRepository.create(order1);
+
+    const order2 = new Order("456", customer.id, [
+      new OrderItem("2", product.name, product.price, product.id, 2)
+    ]);
+    await orderRepository.create(order2);
+
+
+    const orders = await orderRepository.findAll();
+
+    expect(orders.find(o => o.id === order1.id)).toStrictEqual(order1);
+    expect(orders.find(o => o.id === order2.id)).toStrictEqual(order2);
   });
 });
